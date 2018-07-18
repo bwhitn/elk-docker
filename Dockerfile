@@ -131,10 +131,6 @@ ADD ./01-tcp-json-input.conf ${LOGSTASH_PATH_CONF}/conf.d/01-tcp-json-input.conf
 ADD ./10-json.conf ${LOGSTASH_PATH_CONF}/conf.d/10-json.conf
 ADD ./30-output.conf ${LOGSTASH_PATH_CONF}/conf.d/30-output.conf
 
-# patterns
-ADD ./nginx.pattern ${LOGSTASH_HOME}/patterns/nginx
-RUN chown -R logstash:logstash ${LOGSTASH_HOME}/patterns
-
 # Fix permissions
 RUN chmod -R +r ${LOGSTASH_PATH_CONF}
 
