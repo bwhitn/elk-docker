@@ -8,7 +8,7 @@
 # docker run -p 5601:5601 -p 9200:9200 -p 5555:5555 -it --name elk <repo-user>/elk
 
 FROM phusion/baseimage
-MAINTAINER Sebastien Pujadas http://pujadas.net
+MAINTAINER Brian Whitney brian.m.whitney@outlook.com
 ENV REFRESHED_AT 2017-02-28
 
 
@@ -16,11 +16,12 @@ ENV REFRESHED_AT 2017-02-28
 #                                INSTALLATION
 ###############################################################################
 
-### install prerequisites (cURL, gosu, JDK, tzdata)
+### install prerequisites (cURL, gosu, JDK, tzdata, Python3, pip3)
 
 ENV GOSU_VERSION 1.10
 
 ARG DEBIAN_FRONTEND=noninteractive
+ADD requirements.txt /
 RUN set -x \
  && apt-get update -qq \
  && apt-get install -qqy --no-install-recommends ca-certificates curl \
@@ -33,11 +34,13 @@ RUN set -x \
  && rm -r "$GNUPGHOME" /usr/local/bin/gosu.asc \
  && chmod +x /usr/local/bin/gosu \
  && gosu nobody true \
+ && add-apt-repository ppa:deadsnakes/ppa \
  && apt-get update -qq \
- && apt-get install -qqy openjdk-8-jdk tzdata \
+ && apt-get install -qqy openjdk-8-jdk tzdata python3.6 python3-pip \
  && apt-get clean \
+ && pip3 install -r requirements.txt \
  && set +x
-
+ 
 
 ENV ELK_VERSION 6.3.0
 
@@ -63,7 +66,6 @@ RUN mkdir ${ES_HOME} \
 ADD ./elasticsearch-init /etc/init.d/elasticsearch
 RUN sed -i -e 's#^ES_HOME=$#ES_HOME='$ES_HOME'#' /etc/init.d/elasticsearch \
  && chmod +x /etc/init.d/elasticsearch
-
 
 ### install Logstash
 
