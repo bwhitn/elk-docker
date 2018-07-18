@@ -5,7 +5,7 @@
 # docker build -t <repo-user>/elk .
 
 # Run with:
-# docker run -p 5601:5601 -p 9200:9200 -p 5044:5044 -it --name elk <repo-user>/elk
+# docker run -p 5601:5601 -p 9200:9200 -p 5555:5555 -it --name elk <repo-user>/elk
 
 FROM phusion/baseimage
 MAINTAINER Sebastien Pujadas http://pujadas.net
@@ -126,15 +126,9 @@ RUN cp ${ES_HOME}/config/log4j2.properties ${ES_HOME}/config/jvm.options \
 
 ### configure Logstash
 
-# certs/keys for Beats and Lumberjack input
-RUN mkdir -p /etc/pki/tls/certs && mkdir /etc/pki/tls/private
-ADD ./logstash-beats.crt /etc/pki/tls/certs/logstash-beats.crt
-ADD ./logstash-beats.key /etc/pki/tls/private/logstash-beats.key
-
 # filters
-ADD ./02-beats-input.conf ${LOGSTASH_PATH_CONF}/conf.d/02-beats-input.conf
-ADD ./10-syslog.conf ${LOGSTASH_PATH_CONF}/conf.d/10-syslog.conf
-ADD ./11-nginx.conf ${LOGSTASH_PATH_CONF}/conf.d/11-nginx.conf
+ADD ./01-tcp-json-input.conf ${LOGSTASH_PATH_CONF}/conf.d/01-tcp-json-input.conf
+ADD ./10-json.conf ${LOGSTASH_PATH_CONF}/conf.d/10-json.conf
 ADD ./30-output.conf ${LOGSTASH_PATH_CONF}/conf.d/30-output.conf
 
 # patterns
@@ -166,7 +160,7 @@ ADD ./kibana.yml ${KIBANA_HOME}/config/kibana.yml
 ADD ./start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
-EXPOSE 5601 9200 9300 5044
+EXPOSE 5601 9200 9300 5555
 VOLUME /var/lib/elasticsearch
 
 CMD [ "/usr/local/bin/start.sh" ]
