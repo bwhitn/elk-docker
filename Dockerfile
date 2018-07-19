@@ -34,10 +34,11 @@ RUN set -x \
  && rm -r "$GNUPGHOME" /usr/local/bin/gosu.asc \
  && chmod +x /usr/local/bin/gosu \
  && gosu nobody true \
- && add-apt-repository ppa:deadsnakes/ppa \
+ && add-apt-repository -y ppa:deadsnakes/ppa \
  && apt-get update -qq \
- && apt-get install -qqy openjdk-8-jdk tzdata python3.6 python3-pip \
+ && apt-get install -qqy openjdk-8-jdk tzdata python3.6 \
  && apt-get clean \
+ && curl https://bootstrap.pypa.io/get-pip.py | sudo python3.6 \
  && pip3 install -r requirements.txt \
  && set +x
  
