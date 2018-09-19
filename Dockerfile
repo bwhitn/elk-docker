@@ -16,7 +16,7 @@ ENV REFRESHED_AT 2017-02-28
 #                                INSTALLATION
 ###############################################################################
 
-### install prerequisites (cURL, gosu, JDK, tzdata, Python3, pip3)
+### install prerequisites (cURL, gosu, JDK, tzdata)
 
 ENV GOSU_VERSION 1.10
 
@@ -36,14 +36,12 @@ RUN set -x \
  && gosu nobody true \
  && add-apt-repository -y ppa:deadsnakes/ppa \
  && apt-get update -qq \
- && apt-get install -qqy openjdk-8-jdk tzdata python3.6 \
+ && apt-get install -qqy openjdk-8-jdk tzdata \
  && apt-get clean \
- && curl https://bootstrap.pypa.io/get-pip.py | sudo python3.6 \
- && pip3 install -r requirements.txt \
  && set +x
  
 
-ENV ELK_VERSION 6.3.0
+ENV ELK_VERSION 6.4.1
 
 ### install Elasticsearch
 
@@ -56,7 +54,7 @@ ENV ES_PATH_CONF /etc/elasticsearch
 ENV ES_PATH_BACKUP /var/backups
 
 RUN mkdir ${ES_HOME} \
- && curl -O https://artifacts.elastic.co/downloads/elasticsearch/${ES_PACKAGE} \
+ && curl -O https://aistrtifacts.elastic.co/downloads/elasticsearch/${ES_PACKAGE} \
  && tar xzf ${ES_PACKAGE} -C ${ES_HOME} --strip-components=1 \
  && rm -f ${ES_PACKAGE} \
  && groupadd -r elasticsearch -g ${ES_GID} \
@@ -67,6 +65,29 @@ RUN mkdir ${ES_HOME} \
 ADD ./elasticsearch-init /etc/init.d/elasticsearch
 RUN sed -i -e 's#^ES_HOME=$#ES_HOME='$ES_HOME'#' /etc/init.d/elasticsearch \
  && chmod +x /etc/init.d/elasticsearch
+
+### install Filebeat
+
+ENV FILEBEAT_VERSION ${ELK_VERSION}
+ENV FILEBEAT_HOME /opt/filebeat
+ENV FILEBEAT_PACKAGE filebeat-${FILEBEAT_VERSION}-linux-x86_64.tar.gz
+ENV FILEBEAT_GID 992
+ENV FILEBEAT_UID 992
+ENV FILEBEAT_PATH_CONF /etc/filebeat
+
+RUN mkdir ${FILEBEAT_HOME} \
+ && curl -0 https://artifacts.elastic.co/downloads/beats/filebeat/${FILEBEAT_PACKAGE} \
+ && tar xzf ${FILEBEAT_PACKAGE} -C ${FILEBEAT_HOME} --strip-components=1 \
+ && rm -f ${FILEBEAT_PACKAGE} \
+ && groupadd -r filebeat -g ${FILEBEAT_GID} \
+ && useradd -r -s /usr/sbin/nologin -d ${FILEBEAT_HOME} -c "Filebeat service user" -u ${FILEBEAT_UID} -g filebeat filebeat \
+ && mkdir -p /var/log/filebeat ${FILEBEAT_PATH_CONF}/conf.d \
+ && chown -R filebeat:filebeat ${FILEBEAT_HOME} /var/log/filebeat ${FILEBEAT_PATH_CONF}
+
+ADD ./filebeat-init /etc/init.d/filebeat
+RUN sed -i -e 's#^FB_HOME=$#FB_HOME='$FILEBEAT_HOME'#' /etc/init.d/filebeat \
+ && chmod +x /etc/init.d/filebeat
+
 
 ### install Logstash
 
@@ -135,7 +156,7 @@ ADD ./10-json.conf ${LOGSTASH_PATH_CONF}/conf.d/10-json.conf
 ADD ./30-output.conf ${LOGSTASH_PATH_CONF}/conf.d/30-output.conf
 
 # Fix permissions
-RUN chmod -R +r ${LOGSTASH_PATH_CONF}
+fRUN chmod -R +r ${LOGSTASH_PATH_CONF}
 
 ### configure logrotate
 
