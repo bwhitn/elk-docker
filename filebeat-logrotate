@@ -1,0 +1,9 @@
+/var/log/filebeat/*.err /var/log/filebeat/*.log /var/log/filebeat/*.stdout {
+    daily
+    rotate 7
+    copytruncate
+    compress
+    delaycompress
+    missingok
+    notifempty
+}

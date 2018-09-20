@@ -9,7 +9,7 @@
 
 FROM phusion/baseimage
 MAINTAINER Brian Whitney brian.m.whitney@outlook.com
-ENV REFRESHED_AT 2017-02-28
+ENV REFRESHED_AT 2018-09-19
 
 
 ###############################################################################
@@ -21,7 +21,6 @@ ENV REFRESHED_AT 2017-02-28
 ENV GOSU_VERSION 1.10
 
 ARG DEBIAN_FRONTEND=noninteractive
-ADD requirements.txt /
 RUN set -x \
  && apt-get update -qq \
  && apt-get install -qqy --no-install-recommends ca-certificates curl \
@@ -34,9 +33,8 @@ RUN set -x \
  && rm -r "$GNUPGHOME" /usr/local/bin/gosu.asc \
  && chmod +x /usr/local/bin/gosu \
  && gosu nobody true \
- && add-apt-repository -y ppa:deadsnakes/ppa \
  && apt-get update -qq \
- && apt-get install -qqy openjdk-8-jdk tzdata \
+ && apt-get install -qqy openjdk-8-jdk tzdata golang \
  && apt-get clean \
  && set +x
  
@@ -54,7 +52,7 @@ ENV ES_PATH_CONF /etc/elasticsearch
 ENV ES_PATH_BACKUP /var/backups
 
 RUN mkdir ${ES_HOME} \
- && curl -O https://aistrtifacts.elastic.co/downloads/elasticsearch/${ES_PACKAGE} \
+ && curl -O https://artifacts.elastic.co/downloads/elasticsearch/${ES_PACKAGE} \
  && tar xzf ${ES_PACKAGE} -C ${ES_HOME} --strip-components=1 \
  && rm -f ${ES_PACKAGE} \
  && groupadd -r elasticsearch -g ${ES_GID} \
@@ -76,13 +74,13 @@ ENV FILEBEAT_UID 992
 ENV FILEBEAT_PATH_CONF /etc/filebeat
 
 RUN mkdir ${FILEBEAT_HOME} \
- && curl -0 https://artifacts.elastic.co/downloads/beats/filebeat/${FILEBEAT_PACKAGE} \
+ && curl -O https://artifacts.elastic.co/downloads/beats/filebeat/${FILEBEAT_PACKAGE} \
  && tar xzf ${FILEBEAT_PACKAGE} -C ${FILEBEAT_HOME} --strip-components=1 \
  && rm -f ${FILEBEAT_PACKAGE} \
- && groupadd -r filebeat -g ${FILEBEAT_GID} \
- && useradd -r -s /usr/sbin/nologin -d ${FILEBEAT_HOME} -c "Filebeat service user" -u ${FILEBEAT_UID} -g filebeat filebeat \
+ && groupadd -r beat -g ${FILEBEAT_GID} \
+ && useradd -r -s /usr/sbin/nologin -d ${FILEBEAT_HOME} -c "Filebeat service user" -u ${FILEBEAT_UID} -g beat beat \
  && mkdir -p /var/log/filebeat ${FILEBEAT_PATH_CONF}/conf.d \
- && chown -R filebeat:filebeat ${FILEBEAT_HOME} /var/log/filebeat ${FILEBEAT_PATH_CONF}
+ && chown -R beat:beat ${FILEBEAT_HOME} /var/log/filebeat ${FILEBEAT_PATH_CONF}
 
 ADD ./filebeat-init /etc/init.d/filebeat
 RUN sed -i -e 's#^FB_HOME=$#FB_HOME='$FILEBEAT_HOME'#' /etc/init.d/filebeat \
@@ -91,26 +89,26 @@ RUN sed -i -e 's#^FB_HOME=$#FB_HOME='$FILEBEAT_HOME'#' /etc/init.d/filebeat \
 
 ### install Logstash
 
-ENV LOGSTASH_VERSION ${ELK_VERSION}
-ENV LOGSTASH_HOME /opt/logstash
-ENV LOGSTASH_PACKAGE logstash-${LOGSTASH_VERSION}.tar.gz
-ENV LOGSTASH_GID 992
-ENV LOGSTASH_UID 992
-ENV LOGSTASH_PATH_CONF /etc/logstash
-ENV LOGSTASH_PATH_SETTINGS ${LOGSTASH_HOME}/config
+#ENV LOGSTASH_VERSION ${ELK_VERSION}
+#ENV LOGSTASH_HOME /opt/logstash
+#ENV LOGSTASH_PACKAGE logstash-${LOGSTASH_VERSION}.tar.gz
+#ENV LOGSTASH_GID 992
+#ENV LOGSTASH_UID 992
+#ENV LOGSTASH_PATH_CONF /etc/logstash
+#ENV LOGSTASH_PATH_SETTINGS ${LOGSTASH_HOME}/config
 
-RUN mkdir ${LOGSTASH_HOME} \
- && curl -O https://artifacts.elastic.co/downloads/logstash/${LOGSTASH_PACKAGE} \
- && tar xzf ${LOGSTASH_PACKAGE} -C ${LOGSTASH_HOME} --strip-components=1 \
- && rm -f ${LOGSTASH_PACKAGE} \
- && groupadd -r logstash -g ${LOGSTASH_GID} \
- && useradd -r -s /usr/sbin/nologin -d ${LOGSTASH_HOME} -c "Logstash service user" -u ${LOGSTASH_UID} -g logstash logstash \
- && mkdir -p /var/log/logstash ${LOGSTASH_PATH_CONF}/conf.d \
- && chown -R logstash:logstash ${LOGSTASH_HOME} /var/log/logstash ${LOGSTASH_PATH_CONF}
+#RUN mkdir ${LOGSTASH_HOME} \
+# && curl -O https://artifacts.elastic.co/downloads/logstash/${LOGSTASH_PACKAGE} \
+# && tar xzf ${LOGSTASH_PACKAGE} -C ${LOGSTASH_HOME} --strip-components=1 \
+# && rm -f ${LOGSTASH_PACKAGE} \
+# && groupadd -r logstash -g ${LOGSTASH_GID} \
+# && useradd -r -s /usr/sbin/nologin -d ${LOGSTASH_HOME} -c "Logstash service user" -u ${LOGSTASH_UID} -g logstash logstash \
+# && mkdir -p /var/log/logstash ${LOGSTASH_PATH_CONF}/conf.d \
+# && chown -R logstash:logstash ${LOGSTASH_HOME} /var/log/logstash ${LOGSTASH_PATH_CONF}
 
-ADD ./logstash-init /etc/init.d/logstash
-RUN sed -i -e 's#^LS_HOME=$#LS_HOME='$LOGSTASH_HOME'#' /etc/init.d/logstash \
- && chmod +x /etc/init.d/logstash
+#ADD ./logstash-init /etc/init.d/logstash
+#RUN sed -i -e 's#^LS_HOME=$#LS_HOME='$LOGSTASH_HOME'#' /etc/init.d/logstash \
+# && chmod +x /etc/init.d/logstash
 
 
 ### install Kibana
@@ -151,21 +149,28 @@ RUN cp ${ES_HOME}/config/log4j2.properties ${ES_HOME}/config/jvm.options \
 ### configure Logstash
 
 # filters
-ADD ./01-tcp-json-input.conf ${LOGSTASH_PATH_CONF}/conf.d/01-tcp-json-input.conf
-ADD ./10-json.conf ${LOGSTASH_PATH_CONF}/conf.d/10-json.conf
-ADD ./30-output.conf ${LOGSTASH_PATH_CONF}/conf.d/30-output.conf
+#ADD ./01-tcp-json-input.conf ${LOGSTASH_PATH_CONF}/conf.d/01-tcp-json-input.conf
+#ADD ./10-json.conf ${LOGSTASH_PATH_CONF}/conf.d/10-json.conf
+#ADD ./30-output.conf ${LOGSTASH_PATH_CONF}/conf.d/30-output.conf
 
 # Fix permissions
-fRUN chmod -R +r ${LOGSTASH_PATH_CONF}
+#RUN chmod -R +r ${LOGSTASH_PATH_CONF}
 
+### configure Filebeat
+
+#config
+ADD ./filebeat.yml ${FILEBEAT_PATH_CONF}/conf.d/filebeat.yml
+RUN chmod 644 ${FILEBEAT_PATH_CONF}/conf.d/filebeat.yml
 ### configure logrotate
 
+#ADD ./logstash-logrotate /etc/logrotate.d/logstash
 ADD ./elasticsearch-logrotate /etc/logrotate.d/elasticsearch
-ADD ./logstash-logrotate /etc/logrotate.d/logstash
+ADD ./filebeat-logrotate /etc/logrotate.d/filebeat
 ADD ./kibana-logrotate /etc/logrotate.d/kibana
 RUN chmod 644 /etc/logrotate.d/elasticsearch \
- && chmod 644 /etc/logrotate.d/logstash \
- && chmod 644 /etc/logrotate.d/kibana
+ && chmod 644 /etc/logrotate.d/kibana \
+ && chmod 644 /etc/logrotate.d/filebeat
+# && chmod 644 /etc/logrotate.d/logstash \
 
 
 ### configure Kibana
@@ -180,7 +185,9 @@ ADD ./kibana.yml ${KIBANA_HOME}/config/kibana.yml
 ADD ./start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
-EXPOSE 5601 9200 9300 5555
+#9300
+#9200
+EXPOSE 5601
 VOLUME /var/lib/elasticsearch
 
 CMD [ "/usr/local/bin/start.sh" ]

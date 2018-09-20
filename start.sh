@@ -16,7 +16,7 @@
 _term() {
   echo "Terminating ELK"
   service elasticsearch stop
-  service logstash stop
+  service filebeat stop
   service kibana stop
   exit 0
 }
@@ -29,7 +29,7 @@ trap _term SIGTERM SIGINT
 #   but if it's good enough for Fedora (https://goo.gl/88eyXJ), it's good
 #   enough for me :)
 
-rm -f /var/run/elasticsearch/elasticsearch.pid /var/run/logstash.pid \
+rm -f /var/run/elasticsearch/elasticsearch.pid /var/run/filebeat.pid \
   /var/run/kibana5.pid
 
 ## initialise list of log files to stream in console (initially empty)
@@ -143,28 +143,45 @@ fi
 
 ### Logstash
 
-if [ -z "$LOGSTASH_START" ]; then
-  LOGSTASH_START=1
+#if [ -z "$LOGSTASH_START" ]; then
+#  LOGSTASH_START=1
+#fi
+#if [ "$LOGSTASH_START" -ne "1" ]; then
+#  echo "LOGSTASH_START is set to something different from 1, not starting..."
+#else
+#  # override LS_HEAP_SIZE variable if set
+#  if [ ! -z "$LS_HEAP_SIZE" ]; then
+#    awk -v LINE="-Xmx$LS_HEAP_SIZE" '{ sub(/^.Xmx.*/, LINE); print; }' ${LOGSTASH_PATH_SETTINGS}/jvm.options \
+#        > ${LOGSTASH_PATH_SETTINGS}/jvm.options.new && mv ${LOGSTASH_PATH_SETTINGS}/jvm.options.new ${LOGSTASH_PATH_SETTINGS}/jvm.options
+#    awk -v LINE="-Xms$LS_HEAP_SIZE" '{ sub(/^.Xms.*/, LINE); print; }' ${LOGSTASH_PATH_SETTINGS}/jvm.options \
+#        > ${LOGSTASH_PATH_SETTINGS}/jvm.options.new && mv ${LOGSTASH_PATH_SETTINGS}/jvm.options.new ${LOGSTASH_PATH_SETTINGS}/jvm.options
+#  fi
+#
+#  # override LS_OPTS variable if set
+#  if [ ! -z "$LS_OPTS" ]; then
+#    awk -v LINE="LS_OPTS=\"$LS_OPTS\"" '{ sub(/^LS_OPTS=.*/, LINE); print; }' /etc/init.d/logstash \
+#        > /etc/init.d/logstash.new && mv /etc/init.d/logstash.new /etc/init.d/logstash && chmod +x /etc/init.d/logstash
+#  fi
+#
+#  service logstash start
+#  OUTPUT_LOGFILES+="/var/log/logstash/logstash-plain.log "
+#fi
+
+### Filebeat
+
+if [ -z "$FILEBEAT_START" ]; then
+  FILEBEAT_START=1
 fi
-if [ "$LOGSTASH_START" -ne "1" ]; then
-  echo "LOGSTASH_START is set to something different from 1, not starting..."
+if [ "$FILEBEAT_START" -ne "1" ]; then
+  echo "FILEBEAT_START is set to something different from 1, not starting..."
 else
-  # override LS_HEAP_SIZE variable if set
-  if [ ! -z "$LS_HEAP_SIZE" ]; then
-    awk -v LINE="-Xmx$LS_HEAP_SIZE" '{ sub(/^.Xmx.*/, LINE); print; }' ${LOGSTASH_PATH_SETTINGS}/jvm.options \
-        > ${LOGSTASH_PATH_SETTINGS}/jvm.options.new && mv ${LOGSTASH_PATH_SETTINGS}/jvm.options.new ${LOGSTASH_PATH_SETTINGS}/jvm.options
-    awk -v LINE="-Xms$LS_HEAP_SIZE" '{ sub(/^.Xms.*/, LINE); print; }' ${LOGSTASH_PATH_SETTINGS}/jvm.options \
-        > ${LOGSTASH_PATH_SETTINGS}/jvm.options.new && mv ${LOGSTASH_PATH_SETTINGS}/jvm.options.new ${LOGSTASH_PATH_SETTINGS}/jvm.options
+  if [ ! -z "$FB_OPTS" ]; then
+    awk -v LINE="FB_OPTS=\"$FB_OPTS\"" '{ sub(/^FB_OPTS=.*/, LINE); print; }' /etc/init.d/filebeat \
+        > /etc/init.d/filebeat.new && mv /etc/init.d/filebeat.new /etc/init.d/filebeat && chmod +x /etc/init.d/filebeat
   fi
 
-  # override LS_OPTS variable if set
-  if [ ! -z "$LS_OPTS" ]; then
-    awk -v LINE="LS_OPTS=\"$LS_OPTS\"" '{ sub(/^LS_OPTS=.*/, LINE); print; }' /etc/init.d/logstash \
-        > /etc/init.d/logstash.new && mv /etc/init.d/logstash.new /etc/init.d/logstash && chmod +x /etc/init.d/logstash
-  fi
-
-  service logstash start
-  OUTPUT_LOGFILES+="/var/log/logstash/logstash-plain.log "
+  service filebeat start
+  OUTPUT_LOGFILES+="/var/log/filebeat/filebeat-plain.log "
 fi
 
 

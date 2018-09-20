@@ -1,0 +1,27 @@
+filebeat.inputs:
+  - type: log
+    enabled: true
+    encoding: utf-8
+    paths:
+      - /var/log/inhale/*.log
+    json.keys_under_root: true
+    json.overwrite_keys: false
+    json.add_error_key: true
+
+output.elasticsearch:
+  enabled: true
+  hosts: ["localhost:9200"]
+  compression_level: 0
+  escape_html: true
+  #protocol: "https"
+  #username: "name"
+  #password: "password"
+  worker: 1
+  #index: "pattern"
+  #path: "http_path"
+  #max_retries: 3
+  #bulk_max_size: 50
+  ssl.enabled: false
+
+http.enabled: false
+seccomp.enabled: true  

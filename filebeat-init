@@ -27,12 +27,12 @@ fi
 name=filebeat
 pidfile="/var/run/$name.pid"
 
-FB_USER=filebeat
-FB_GROUP=filebeat
+FB_USER=beat
+FB_GROUP=beat
 FB_HOME=
 FB_LOG_DIR=/var/log/filebeat
-FB_LOG_FILE="${LS_LOG_DIR}/${name}-plain.log"
-FB_CONF_DIR=/etc/filebeat/conf.d
+FB_LOG_FILE="${FB_LOG_DIR}/${name}-plain.log"
+FB_CONF=/etc/filebeat/conf.d/filebeat.yml
 FB_OPEN_FILES=16384
 FB_NICE=19
 FB_OPTS=
@@ -40,8 +40,8 @@ FB_OPTS=
 [ -r /etc/default/$name ] && . /etc/default/$name
 [ -r /etc/sysconfig/$name ] && . /etc/sysconfig/$name
 
-program=/opt/logstash/bin/logstash
-args="--path.config ${FB_CONF_DIR} --path.logs ${FB_LOG_DIR} ${FB_OPTS}"
+program=./filebeat
+args="-e -c ${FB_CONF}"
 
 start() {
   HOME=${FB_HOME}
@@ -55,17 +55,14 @@ start() {
   ulimit -n ${FB_OPEN_FILES}
 
   # Run the program!
-  nice -n ${FB_NICE} chroot --userspec $FB_USER:$FB_GROUP / sh -c "
-    cd $FB_HOME
-    ulimit -n ${FB_OPEN_FILES}
-    exec \"$program\" $args
-  " > "${FB_LOG_DIR}/$name.stdout" 2> "${FB_LOG_DIR}/$name.err" &
+  nice -n ${FB_NICE} chroot --userspec $FB_USER:$FB_GROUP / sh -c "cd $FB_HOME && ulimit -n ${FB_OPEN_FILES} && exec \"$program\" $args" &> "${FB_LOG_FILE}" &
 
   # Generate the pidfile from here. If we instead made the forked process
   # generate it there will be a race condition between the pidfile writing
   # and a process possibly asking for status.
   echo $! > $pidfile
 
+  echo "$pidfile pidfile"
   echo "$name started."
   return 0
 }
