@@ -16,7 +16,7 @@
 _term() {
   echo "Terminating ELK"
   service elasticsearch stop
-  service filebeat stop
+#  service filebeat stop
   service kibana stop
   exit 0
 }
@@ -29,7 +29,7 @@ trap _term SIGTERM SIGINT
 #   but if it's good enough for Fedora (https://goo.gl/88eyXJ), it's good
 #   enough for me :)
 
-rm -f /var/run/elasticsearch/elasticsearch.pid /var/run/filebeat.pid \
+rm -f /var/run/elasticsearch/elasticsearch.pid \
   /var/run/kibana5.pid
 
 ## initialise list of log files to stream in console (initially empty)
@@ -169,20 +169,20 @@ fi
 
 ### Filebeat
 
-if [ -z "$FILEBEAT_START" ]; then
-  FILEBEAT_START=1
-fi
-if [ "$FILEBEAT_START" -ne "1" ]; then
-  echo "FILEBEAT_START is set to something different from 1, not starting..."
-else
-  if [ ! -z "$FB_OPTS" ]; then
-    awk -v LINE="FB_OPTS=\"$FB_OPTS\"" '{ sub(/^FB_OPTS=.*/, LINE); print; }' /etc/init.d/filebeat \
-        > /etc/init.d/filebeat.new && mv /etc/init.d/filebeat.new /etc/init.d/filebeat && chmod +x /etc/init.d/filebeat
-  fi
+#if [ -z "$FILEBEAT_START" ]; then
+#  FILEBEAT_START=1
+#fi
+#if [ "$FILEBEAT_START" -ne "1" ]; then
+#  echo "FILEBEAT_START is set to something different from 1, not starting..."
+#else
+#  if [ ! -z "$FB_OPTS" ]; then
+#    awk -v LINE="FB_OPTS=\"$FB_OPTS\"" '{ sub(/^FB_OPTS=.*/, LINE); print; }' /etc/init.d/filebeat \
+#        > /etc/init.d/filebeat.new && mv /etc/init.d/filebeat.new /etc/init.d/filebeat && chmod +x /etc/init.d/filebeat
+#  fi
 
-  service filebeat start
-  OUTPUT_LOGFILES+="/var/log/filebeat/filebeat-plain.log "
-fi
+#  service filebeat start
+#  OUTPUT_LOGFILES+="/var/log/filebeat/filebeat-plain.log "
+#fi
 
 
 ### Kibana

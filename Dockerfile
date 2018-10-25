@@ -7,7 +7,7 @@
 # Run with:
 # docker run -p 5601:5601 -p 9200:9200 -p 5555:5555 -it --name elk <repo-user>/elk
 
-FROM phusion/baseimage
+FROM phusion/baseimage:master
 MAINTAINER Brian Whitney brian.m.whitney@outlook.com
 ENV REFRESHED_AT 2018-09-19
 
@@ -16,7 +16,7 @@ ENV REFRESHED_AT 2018-09-19
 #                                INSTALLATION
 ###############################################################################
 
-### install prerequisites (cURL, gosu, JDK, tzdata)
+### install prerequisites (cURL, gosu, JDK, tzdata, tor)
 
 ENV GOSU_VERSION 1.10
 
@@ -24,6 +24,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN set -x \
  && apt-get update -qq \
  && apt-get install -qqy --no-install-recommends ca-certificates curl \
+ && apt-get install -qqy tor \
  && rm -rf /var/lib/apt/lists/* \
  && curl -L -o /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture)" \
  && curl -L -o /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture).asc" \
@@ -37,7 +38,7 @@ RUN set -x \
  && apt-get install -qqy openjdk-8-jdk tzdata golang \
  && apt-get clean \
  && set +x
- 
+
 
 ENV ELK_VERSION 6.4.1
 
@@ -66,25 +67,25 @@ RUN sed -i -e 's#^ES_HOME=$#ES_HOME='$ES_HOME'#' /etc/init.d/elasticsearch \
 
 ### install Filebeat
 
-ENV FILEBEAT_VERSION ${ELK_VERSION}
-ENV FILEBEAT_HOME /opt/filebeat
-ENV FILEBEAT_PACKAGE filebeat-${FILEBEAT_VERSION}-linux-x86_64.tar.gz
-ENV FILEBEAT_GID 992
-ENV FILEBEAT_UID 992
-ENV FILEBEAT_PATH_CONF /etc/filebeat
+#ENV FILEBEAT_VERSION ${ELK_VERSION}
+#ENV FILEBEAT_HOME /opt/filebeat
+#ENV FILEBEAT_PACKAGE filebeat-${FILEBEAT_VERSION}-linux-x86_64.tar.gz
+#ENV FILEBEAT_GID 992
+#ENV FILEBEAT_UID 992
+#ENV FILEBEAT_PATH_CONF /etc/filebeat
 
-RUN mkdir ${FILEBEAT_HOME} \
- && curl -O https://artifacts.elastic.co/downloads/beats/filebeat/${FILEBEAT_PACKAGE} \
- && tar xzf ${FILEBEAT_PACKAGE} -C ${FILEBEAT_HOME} --strip-components=1 \
- && rm -f ${FILEBEAT_PACKAGE} \
- && groupadd -r beat -g ${FILEBEAT_GID} \
- && useradd -r -s /usr/sbin/nologin -d ${FILEBEAT_HOME} -c "Filebeat service user" -u ${FILEBEAT_UID} -g beat beat \
- && mkdir -p /var/log/filebeat ${FILEBEAT_PATH_CONF}/conf.d \
- && chown -R beat:beat ${FILEBEAT_HOME} /var/log/filebeat ${FILEBEAT_PATH_CONF}
+#RUN mkdir ${FILEBEAT_HOME} \
+# && curl -O https://artifacts.elastic.co/downloads/beats/filebeat/${FILEBEAT_PACKAGE} \
+# && tar xzf ${FILEBEAT_PACKAGE} -C ${FILEBEAT_HOME} --strip-components=1 \
+# && rm -f ${FILEBEAT_PACKAGE} \
+# && groupadd -r beat -g ${FILEBEAT_GID} \
+# && useradd -r -s /usr/sbin/nologin -d ${FILEBEAT_HOME} -c "Filebeat service user" -u ${FILEBEAT_UID} -g beat beat \
+# && mkdir -p /var/log/filebeat ${FILEBEAT_PATH_CONF}/conf.d \
+# && chown -R beat:beat ${FILEBEAT_HOME} /var/log/filebeat ${FILEBEAT_PATH_CONF}
 
-ADD ./filebeat-init /etc/init.d/filebeat
-RUN sed -i -e 's#^FB_HOME=$#FB_HOME='$FILEBEAT_HOME'#' /etc/init.d/filebeat \
- && chmod +x /etc/init.d/filebeat
+#ADD ./filebeat-init /etc/init.d/filebeat
+#RUN sed -i -e 's#^FB_HOME=$#FB_HOME='$FILEBEAT_HOME'#' /etc/init.d/filebeat \
+# && chmod +x /etc/init.d/filebeat
 
 
 ### install Logstash
@@ -159,17 +160,17 @@ RUN cp ${ES_HOME}/config/log4j2.properties ${ES_HOME}/config/jvm.options \
 ### configure Filebeat
 
 #config
-ADD ./filebeat.yml ${FILEBEAT_PATH_CONF}/conf.d/filebeat.yml
-RUN chmod 644 ${FILEBEAT_PATH_CONF}/conf.d/filebeat.yml
+#ADD ./filebeat.yml ${FILEBEAT_PATH_CONF}/conf.d/filebeat.yml
+#RUN chmod 644 ${FILEBEAT_PATH_CONF}/conf.d/filebeat.yml
 ### configure logrotate
 
 #ADD ./logstash-logrotate /etc/logrotate.d/logstash
 ADD ./elasticsearch-logrotate /etc/logrotate.d/elasticsearch
-ADD ./filebeat-logrotate /etc/logrotate.d/filebeat
+#ADD ./filebeat-logrotate /etc/logrotate.d/filebeat
 ADD ./kibana-logrotate /etc/logrotate.d/kibana
 RUN chmod 644 /etc/logrotate.d/elasticsearch \
- && chmod 644 /etc/logrotate.d/kibana \
- && chmod 644 /etc/logrotate.d/filebeat
+ && chmod 644 /etc/logrotate.d/kibana
+# && chmod 644 /etc/logrotate.d/filebeat
 # && chmod 644 /etc/logrotate.d/logstash \
 
 
